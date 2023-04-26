@@ -4,6 +4,7 @@ const jwt = require('jsonwebtoken');
 const router = express.Router();
 const { getUniqueTag } = require('../services/userService');
 const User = require('../models/UsersModel');
+const auth = require('../middlewares/auth');
 const { HTTP_STATUS_CODES } = require('../constants');
 
 router.post('/register', async (req, res) => {
@@ -41,6 +42,32 @@ router.post('/login', async (req, res) => {
 
   const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
   res.json({ token });
+});
+
+
+router.post('/logout', auth, (req, res) => {
+  res.clearCookie('jwtToken');
+  res.status(HTTP_STATUS_CODES.OK).json({ message: 'Logged out successfully' });
+});
+
+// Route for deleting a user
+router.delete('/:userId', auth, async (req, res) => {
+  try {
+    // Check if the user making the request is the same as the user being deleted
+    if (req.params.userId !== req.userId) {return res.status(HTTP_STATUS_CODES.FORBIDDEN).json({ error: 'You are not authorized to delete this user' });}
+
+    // Check if the user exists
+    const user = await User.findById(req.userId);
+    if (!user) {return res.status(HTTP_STATUS_CODES.NOT_FOUND).json({ error: 'User not found' });}
+
+    // Delete the user
+    await User.findByIdAndDelete(req.userId);
+
+    res.status(HTTP_STATUS_CODES.OK).json({ message: 'User deleted successfully' });
+  } catch (err) {
+    console.error(err);
+    res.status(HTTP_STATUS_CODES.INTERNAL_SERVER_ERROR).json({ error: 'Internal Server Error' });
+  }
 });
 
 module.exports = router;
