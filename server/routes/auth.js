@@ -5,7 +5,7 @@ const router = express.Router();
 const { getUniqueTag, checkBanStatus } = require('../services/userService');
 const User = require('../models/UsersModel');
 const Ban = require('../models/BansModel');
-const auth = require('../middlewares/auth');
+const { auth } = require('../middlewares/auth');
 const { HTTP_STATUS_CODES } = require('../constants');
 
 router.post('/register', async (req, res) => {
@@ -52,7 +52,7 @@ router.post('/login', async (req, res) => {
       }
     }
 
-    const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { expiresIn: '1h' })
+    const token = jwt.sign({ userId: user._id, role: user.role }, process.env.JWT_SECRET, { expiresIn: '1h' })
     res.json({ token});
   } catch (error) {
     console.error(error);
@@ -61,7 +61,7 @@ router.post('/login', async (req, res) => {
 });
 
 
-router.post('/logout', auth, (req, res) => {
+router.post('/logout', auth(), (req, res) => {
   res.clearCookie('jwtToken');
   res.status(HTTP_STATUS_CODES.OK).json({ message: 'Logged out successfully' });
 });
