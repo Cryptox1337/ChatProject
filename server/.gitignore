@@ -1,0 +1,24 @@
+# Node.js
+node_modules
+npm-debug.log
+*.env
+
+# Logs
+logs
+*.log
+
+# Build output
+build/
+
+# Dependency directories
+jspm_packages/
+
+# macOS
+.DS_Store
+
+# IDE
+.vscode/
+.idea/
+
+# OS generated files
+Thumbs.db
