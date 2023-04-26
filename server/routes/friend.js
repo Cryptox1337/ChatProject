@@ -15,6 +15,12 @@ router.post('/add/:id', auth(), async (req, res) => {
   const receiver = await User.findById(receiverId);
   if (!receiver) {return res.status(HTTP_STATUS_CODES.NOT_FOUND).json({ error: 'Receiver not found' });}
 
+  const sender = await User.findById(senderId);
+  if (!sender) {return res.status(HTTP_STATUS_CODES.NOT_FOUND).json({ error: 'Sender not found' });}
+
+  // Check if sender is blocked by receiver or receiver is blocked by sender
+  if (receiver.blockedUsers.includes(senderId) || sender.blockedUsers.includes(receiverId)) {return res.status(HTTP_STATUS_CODES.BAD_REQUEST).json({ error: 'Cannot send friend request to a blocked user' });}
+
   try {
     // Check if there is an active friend request
     const existingRequest = await FriendRequest.findOne({
@@ -73,6 +79,7 @@ router.post('/accept/:id', auth(), async (req, res) => {
       // Add the sender to the receiver's friend list
       const receiver = await User.findById(request.receiver);
       const sender = await User.findById(request.sender);
+
       receiver.friends.push(sender._id);
       await receiver.save();
   
@@ -157,9 +164,9 @@ router.get('/friends', auth(), async (req, res) => {
 // Get all friend requests
 router.get('/requests', auth(), async (req, res) => {
     const userId = req.userId;
-    
+
     try {
-      const requests = await FriendRequest.find({ receiver: userId }).populate('sender', 'name email');
+      const requests = await FriendRequest.find({ receiver: userId }).populate('sender');
       res.json(requests);
     } catch (error) {
       res.status(HTTP_STATUS_CODES.INTERNAL_SERVER_ERROR).json({ error: 'Internal Server Error' });
