@@ -21,7 +21,7 @@ const userSchema = new mongoose.Schema({
     type: Date,
     required: true,
   },
-  tag: {
+  discriminator: {
     type: String,
     required: true,
     trim: true,

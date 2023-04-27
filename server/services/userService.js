@@ -1,17 +1,17 @@
 const User = require('../models/UsersModel');
 const Ban = require('../models/BansModel');
 
-async function getUniqueTag(username) {
+async function getUniqueDiscriminator(username) {
   const usersWithSameUsername = await User.find({ username });
-  let tag = null;
+  let discriminator = null;
   for (let i = 1; i <= 9999; i++) {
-    const paddedTag = i.toString().padStart(4, '0'); // pad tag with leading zeros if necessary
-    if (!usersWithSameUsername.some(user => user.tag === paddedTag)) {
-      tag = paddedTag;
+    const paddedDiscriminator = i.toString().padStart(4, '0'); // pad discriminator with leading zeros if necessary
+    if (!usersWithSameUsername.some(user => user.discriminator === paddedDiscriminator)) {
+      discriminator = paddedDiscriminator;
       break;
     }
   }
-  return tag;
+  return discriminator;
 }
 
 async function checkBanStatus(user) {
@@ -35,6 +35,6 @@ async function checkBanStatus(user) {
   }
 
 module.exports = {
-  getUniqueTag,
+  getUniqueDiscriminator,
   checkBanStatus,
 };
