@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
 
-const bansSchema = new mongoose.Schema({
+const banSchema = new mongoose.Schema({
   user: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
@@ -23,6 +23,6 @@ const bansSchema = new mongoose.Schema({
   }
 });
 
-const Bans = mongoose.model('Bans', bansSchema);
+const Ban = mongoose.model('Ban', banSchema);
 
-module.exports = Bans;
+module.exports = Ban;

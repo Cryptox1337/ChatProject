@@ -67,7 +67,7 @@ router.post('/logout', auth(), (req, res) => {
 });
 
 // Route for deleting a user
-router.delete('/:userId', auth, async (req, res) => {
+router.delete('/:userId', auth(), async (req, res) => {
   try {
     if (req.params.userId !== req.userId) {return res.status(HTTP_STATUS_CODES.FORBIDDEN).json({ error: 'You are not authorized to delete this user' });}
 
