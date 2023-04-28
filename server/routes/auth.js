@@ -51,7 +51,7 @@ router.post('/login', async (req, res) => {
           }
         }
 
-        const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { expiresIn: '1h' })
+        const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET, { expiresIn: '1h' })
         res.json({ token});
     } catch (error) {
         console.error(error);
@@ -68,9 +68,9 @@ router.post('/logout', auth(), (req, res) => {
 // Route for deleting a user
 router.delete('/:userId', auth(), async (req, res) => {
     try {
-        if (req.params.userId !== req.user._id) {return res.status(HTTP_STATUS_CODES.FORBIDDEN).json({ error: 'You are not authorized to delete this user' });}
+        if (req.params.userId !== req.user.id) {return res.status(HTTP_STATUS_CODES.FORBIDDEN).json({ error: 'You are not authorized to delete this user' });}
 
-        await User.findByIdAndDelete(req.user._id);
+        await User.findByIdAndDelete(req.user.id);
 
         res.status(HTTP_STATUS_CODES.OK).json({ message: 'User deleted successfully' });
     } catch (err) {

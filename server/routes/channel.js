@@ -15,12 +15,12 @@ router.get('/:channelId/messages', auth(), async (req, res, next) => {
         const channel = await Channel.findById(channelId);
         if (!channel) {return res.status(HTTP_STATUS_CODES.NOT_FOUND).json({ message: 'Channel not found' });}
 
-        if ((channel.type === 'DM' || channel.type === 'GROUP_DM') && !channel.recipients.includes(req.user._id)) {
+        if ((channel.type === 'DM' || channel.type === 'GROUP_DM') && !channel.recipients.includes(req.user.id)) {
           return res.status(HTTP_STATUS_CODES.FORBIDDEN).json({ message: 'User is not a recipient of this DM' });
         } else if (channel.server_id) {
             // Check if the requester is a member of the server
             const serverId = channel.server_id;
-            const userId = req.user._id;
+            const userId = req.user.id;
 
             const serverMember = await ServerMembers.findOne({ server: serverId, user: userId });
             if (!serverMember) {return res.status(HTTP_STATUS_CODES.FORBIDDEN).json({ message: 'You are not a member of this server' });}

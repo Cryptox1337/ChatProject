@@ -11,11 +11,11 @@ router.post('/', auth(), async (req, res) => {
 		if (!name) {return res.status(HTTP_STATUS_CODES.BAD_REQUEST).json({ message: 'Server name is required' });}
 
 		// Create a new server
-		const server = new Server({name, owner: req.user._id});
+		const server = new Server({name, owner: req.user.id});
 	  	await server.save();
 		
 		// Add the owner as a member of the server
-		const serverMember = new ServerMembers({server: server._id, user: req.user._id, joined_at: new Date()});
+		const serverMember = new ServerMembers({server: server.id, user: req.user.id, joined_at: new Date()});
 		await serverMember.save();
 		
 		res.status(HTTP_STATUS_CODES.CREATED).json({ server });
@@ -35,7 +35,7 @@ router.delete('/:serverId', auth(), async (req, res) => {
   		if (!server) {return res.status(HTTP_STATUS_CODES.NOT_FOUND).json({ message: 'Server not found' });}
 
   		// Check if the requester is the server owner
-  		if (server.owner !== req.user._id) {return res.status(HTTP_STATUS_CODES.UNAUTHORIZED).json({ message: 'You are not the owner of this server' });}
+  		if (server.owner !== req.user.id) {return res.status(HTTP_STATUS_CODES.UNAUTHORIZED).json({ message: 'You are not the owner of this server' });}
 
     	// Remove all members of the server from ServerMembers collection
     	await ServerMembers.deleteMany({ server: serverId });

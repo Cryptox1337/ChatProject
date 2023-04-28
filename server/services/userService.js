@@ -15,11 +15,11 @@ async function getUniqueDiscriminator(username) {
 }
 
 async function checkBanStatus(user) {
-    const isBanned = await Ban.findOne({ user: user._id, unbannedAt: { $exists: false }, permanent: true });
+    const isBanned = await Ban.findOne({ user: user.id, unbannedAt: { $exists: false }, permanent: true });
   
     if (isBanned) {return { isBanned: true, type: 'permanently', reason: isBanned.reason };}
   
-    const activeBans = await Ban.find({ user: user._id, unbannedAt: { $exists: true, $gte: new Date() } }).sort({ unbannedAt: -1 }).limit(1);
+    const activeBans = await Ban.find({ user: user.id, unbannedAt: { $exists: true, $gte: new Date() } }).sort({ unbannedAt: -1 }).limit(1);
   
     if (activeBans.length > 0) {
       const { reason, unbannedAt, unbannedAtFormatted = unbannedAt.toLocaleString(), expiresIn = Math.floor((unbannedAt - new Date()) / 1000), type = (expiresIn === 0 ? 'permanently' : 'temporarily') } = activeBans[0];

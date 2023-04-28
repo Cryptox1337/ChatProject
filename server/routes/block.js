@@ -13,24 +13,24 @@ router.post('/:id', auth(), async (req, res) => {
     	// Check if the user to be blocked exists
     	if (!targetUser) {return res.status(HTTP_STATUS_CODES.NOT_FOUND).json({ error: 'User not found' });}
 
-    	if (req.user._id === targetUser._id) {return res.status(HTTP_STATUS_CODES.BAD_REQUEST).json({ error: 'You cannot block yourself' });}
+    	if (req.user.id === targetUser.id) {return res.status(HTTP_STATUS_CODES.BAD_REQUEST).json({ error: 'You cannot block yourself' });}
 
     	// Check if the user is already blocked
-    	if (req.user.blocked.includes(targetUser._id)) {return res.status(HTTP_STATUS_CODES.BAD_REQUEST).json({ error: 'User is already blocked' });}
+    	if (req.user.blocked.includes(targetUser.id)) {return res.status(HTTP_STATUS_CODES.BAD_REQUEST).json({ error: 'User is already blocked' });}
 
     	// Block the user
-    	req.user.blocked.push(targetUser._id);
+    	req.user.blocked.push(targetUser.id);
 
     	// Remove from Friend list
-    	req.user.friends = req.user.friends.filter(friend => friend.toString() !== targetUser._id);
+    	req.user.friends = req.user.friends.filter(friend => friend.toString() !== targetUser.id);
     	await req.user.save();
 
     	// Remove from Friend list
-    	targetUser.friends = targetUser.friends.filter(friend => friend.toString() !== req.user._id);
+    	targetUser.friends = targetUser.friends.filter(friend => friend.toString() !== req.user.id);
     	await targetUser.save();
 
     	// Delete all friend requests between the two users
-    	await FriendRequest.deleteMany({$or: [{ sender: req.user._id, receiver: targetUser._id },{ sender: targetUser._id, receiver: req.user._id }]});
+    	await FriendRequest.deleteMany({$or: [{ sender: req.user.id, receiver: targetUser.id },{ sender: targetUser.id, receiver: req.user.id }]});
 
     	res.json({ message: 'User blocked successfully' });
   	} catch (error) {
@@ -48,10 +48,10 @@ router.delete('/:id', auth(), async (req, res) => {
     	if (!targetUser) {return res.status(HTTP_STATUS_CODES.NOT_FOUND).json({ error: 'User not found' });}
 
     	// Check if the user is blocked
-    	if (!req.user.blocked.includes(targetUser._id)) {return res.status(HTTP_STATUS_CODES.BAD_REQUEST).json({ error: 'User is not blocked' });}
+    	if (!req.user.blocked.includes(targetUser.id)) {return res.status(HTTP_STATUS_CODES.BAD_REQUEST).json({ error: 'User is not blocked' });}
 
     	// Unblock the user
-    	req.user.blocked = req.user.blocked.filter(blockedUser => !blockedUser.equals(targetUser._id));
+    	req.user.blocked = req.user.blocked.filter(blockedUser => !blockedUser.equals(targetUser.id));
     	await req.user.save();
 
     	res.json({ message: 'User unblocked successfully' });
