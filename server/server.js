@@ -11,8 +11,11 @@ app.use(express.json());
 
 // Routes
 app.use('/api/auth', require('./routes/auth'));
+app.use('/api/channels', require('./routes/channel'));
+app.use('/api/servers', require('./routes/server'));
 app.use('/api/friend', require('./routes/friend'));
 app.use('/api/block', require('./routes/block'));
+
 
 // Connect to database
 connectToDatabase();

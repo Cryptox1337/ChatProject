@@ -35,7 +35,7 @@ const userSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId, 
     ref: 'User' 
   }],
-  blockedUsers: [{ 
+  blocked: [{ 
     type: mongoose.Schema.Types.ObjectId, 
     ref: 'User' 
   }],

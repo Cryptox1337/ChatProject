@@ -7,70 +7,52 @@ const { HTTP_STATUS_CODES } = require('../constants');
 
 // Add friend by user ID
 router.post('/add/:id', auth(), async (req, res) => {
-  const senderId = req.userId;
-  const receiverId = req.params.id;
+	try {
+		const receiver = await User.findById(req.params.id);
+		if (!receiver) {return res.status(HTTP_STATUS_CODES.NOT_FOUND).json({ error: 'Receiver not found' });}
 
-  if (senderId === receiverId) {return res.status(HTTP_STATUS_CODES.BAD_REQUEST).json({ error: 'Sender and receiver cannot be the same user' });}
+  		if (req.user._id === receiver._id) {return res.status(HTTP_STATUS_CODES.BAD_REQUEST).json({ error: 'Sender and receiver cannot be the same user' });}
 
-  const receiver = await User.findById(receiverId);
-  if (!receiver) {return res.status(HTTP_STATUS_CODES.NOT_FOUND).json({ error: 'Receiver not found' });}
+  		// Check if sender is blocked by receiver or receiver is blocked by sender
+  		if (receiver.blocked.includes(req.user._id) || req.user.blocked.includes(receiver._id)) {return res.status(HTTP_STATUS_CODES.BAD_REQUEST).json({ error: 'Cannot send friend request to a blocked user' });}
 
-  const sender = await User.findById(senderId);
-  if (!sender) {return res.status(HTTP_STATUS_CODES.NOT_FOUND).json({ error: 'Sender not found' });}
+  		// Check if there is an active friend request
+  		const existingRequest = await FriendRequest.findOne({$or: [{ sender: req.user._id, receiver: receiver._id },{ sender: receiver._id, receiver: req.user._id }]});
+  		if (existingRequest) {return res.status(HTTP_STATUS_CODES.BAD_REQUEST).json({ error: 'Friend request already exists' });}
 
-  // Check if sender is blocked by receiver or receiver is blocked by sender
-  if (receiver.blockedUsers.includes(senderId) || sender.blockedUsers.includes(receiverId)) {return res.status(HTTP_STATUS_CODES.BAD_REQUEST).json({ error: 'Cannot send friend request to a blocked user' });}
+  		// Create a new friend request
+  		const newRequest = new FriendRequest({sender: req.user._id, receiver: receiver._id});
+		await newRequest.save();
 
-  try {
-    // Check if there is an active friend request
-    const existingRequest = await FriendRequest.findOne({
-      $or: [
-        { sender: senderId, receiver: receiverId },
-        { sender: receiverId, receiver: senderId },
-      ],
-    });
-    if (existingRequest) {return res.status(HTTP_STATUS_CODES.BAD_REQUEST).json({ error: 'Friend request already exists' });}
-
-    // Create a new friend request
-    const newRequest = new FriendRequest({
-      sender: senderId,
-      receiver: receiverId,
-    });
-    await newRequest.save();
-
-    res.json({ message: 'Friend request sent' });
-  } catch (error) {
-    res.status(HTTP_STATUS_CODES.INTERNAL_SERVER_ERROR).json({ error: 'Internal Server Error' });
-  }
+		res.json({ message: 'Friend request sent' });
+  	} catch (error) {
+    	console.error(error)
+    	res.status(HTTP_STATUS_CODES.INTERNAL_SERVER_ERROR).json({ error: 'Internal Server Error' });
+  	}
 });
 
 // Deny friend request by request ID
 router.post('/deny/:id', auth(), async (req, res) => {
-    const requestId = req.params.id;
-  
     try {
-      const request = await FriendRequest.findById(requestId);
+      const request = await FriendRequest.findById(req.params.id);
       if (!request) {return res.status(HTTP_STATUS_CODES.NOT_FOUND).json({ error: 'Friend request not found' });}
   
       // Check if the authenticated user is the receiver of the friend request
-      if (request.receiver.toString() !== req.userId) {
-        return res.status(HTTP_STATUS_CODES.FORBIDDEN).json({ error: 'You are not authorized to deny this friend request' });
-      }
+      if (request.receiver.toString() !== req.user._id) {return res.status(HTTP_STATUS_CODES.FORBIDDEN).json({ error: 'You are not authorized to deny this friend request' });}
   
       await request.remove();
   
       res.json({ message: 'Friend request denied' });
     } catch (error) {
+      console.error(error)
       res.status(HTTP_STATUS_CODES.INTERNAL_SERVER_ERROR).json({ error: 'Internal Server Error' });
     }
 });
 
 // Accept friend request by request ID
 router.post('/accept/:id', auth(), async (req, res) => {
-    const requestId = req.params.id;
-  
     try {
-      const request = await FriendRequest.findById(requestId);
+      const request = await FriendRequest.findById(req.params.id);
       if (!request) {return res.status(HTTP_STATUS_CODES.NOT_FOUND).json({ error: 'Friend request not found' });}
   
       // Check if the authenticated user is the receiver of the friend request
@@ -80,6 +62,7 @@ router.post('/accept/:id', auth(), async (req, res) => {
       const receiver = await User.findById(request.receiver);
       const sender = await User.findById(request.sender);
 
+	  // Add the sender to the receiver's friend list
       receiver.friends.push(sender._id);
       await receiver.save();
   
@@ -92,16 +75,15 @@ router.post('/accept/:id', auth(), async (req, res) => {
   
       res.json({ message: 'Friend request accepted' });
     } catch (error) {
+      console.error(error)
       res.status(HTTP_STATUS_CODES.INTERNAL_SERVER_ERROR).json({ error: 'Internal Server Error' });
     }
   });
 
 // Revoke friend request by request ID
 router.delete('/revoke/:id', auth(), async (req, res) => {
-    const requestId = req.params.id;
-  
     try {
-      const request = await FriendRequest.findById(requestId);
+      const request = await FriendRequest.findById(req.params.id);
       if (!request) {return res.status(HTTP_STATUS_CODES.NOT_FOUND).json({ error: 'Friend request not found' });}
   
       // Check if the authenticated user is the sender of the friend request
@@ -111,64 +93,55 @@ router.delete('/revoke/:id', auth(), async (req, res) => {
   
       res.json({ message: 'Friend request revoked' });
     } catch (error) {
+      console.error(error)
       res.status(HTTP_STATUS_CODES.INTERNAL_SERVER_ERROR).json({ error: 'Internal Server Error' });
     }
 });
 
 // Remove friend by user ID
 router.post('/remove/:id', auth(), async (req, res) => {
-    const userId = req.userId;
-    const friendId = req.params.id;
+	try {
+		const friend = await User.findById(req.params.id);
+		if (!friend) {return res.status(HTTP_STATUS_CODES.NOT_FOUND).json({ error: 'Friend not found' });}
   
-    if (userId === friendId) {return res.status(HTTP_STATUS_CODES.BAD_REQUEST).json({ error: 'User and friend cannot be the same user' });}
+      	if (req.user._id === friend._id) {return res.status(HTTP_STATUS_CODES.BAD_REQUEST).json({ error: 'User and friend cannot be the same user' });}
   
-    try {
-      const user = await User.findById(userId);
-      if (!user) {return res.status(HTTP_STATUS_CODES.NOT_FOUND).json({ error: 'User not found' });}
   
-      const friend = await User.findById(friendId);
-      if (!friend) {return res.status(HTTP_STATUS_CODES.NOT_FOUND).json({ error: 'Friend not found' });}
+      	// Check if the friend is in the user's friend list
+      	if (!req.user.friends.includes(friend._id)) {return res.status(HTTP_STATUS_CODES.BAD_REQUEST).json({ error: 'Friend not in user\'s friend list' });}
   
-      // Check if the friend is in the user's friend list
-      if (!user.friends.includes(friendId)) {return res.status(HTTP_STATUS_CODES.BAD_REQUEST).json({ error: 'Friend not in user\'s friend list' });}
+      	// Remove the friend from the user's friend list
+      	req.user.friends.pull(friend._id);
+      	await req.user.save();
   
-      // Remove the friend from the user's friend list
-      user.friends.pull(friendId);
-      await user.save();
+      	// Remove the user from the friend's friend list
+      	friend.friends.pull(req.user._id);
+      	await friend.save();
   
-      // Remove the user from the friend's friend list
-      friend.friends.pull(userId);
-      await friend.save();
-  
-      res.json({ message: 'Friend removed' });
-    } catch (error) {
-      res.status(HTTP_STATUS_CODES.INTERNAL_SERVER_ERROR).json({ error: 'Internal Server Error' });
-    }
+      	res.json({ message: 'Friend removed' });
+  	} catch (error) {
+      	console.error(error)
+      	res.status(HTTP_STATUS_CODES.INTERNAL_SERVER_ERROR).json({ error: 'Internal Server Error' });
+  	}
 });
 
 // Get all friends of the authenticated user
 router.get('/friends', auth(), async (req, res) => {
-    const userId = req.userId;
-  
     try {
-      const user = await User.findById(userId).populate('friends');
-      if (!user) {return res.status(HTTP_STATUS_CODES.NOT_FOUND).json({ error: 'User not found' });}
-  
-      const friends = user.friends;
-      res.json({ friends });
+      res.json(req.user.friends);
     } catch (error) {
+      console.error(error)
       res.status(HTTP_STATUS_CODES.INTERNAL_SERVER_ERROR).json({ error: 'Internal Server Error' });
     }
 });
 
 // Get all friend requests
 router.get('/requests', auth(), async (req, res) => {
-    const userId = req.userId;
-
     try {
-      const requests = await FriendRequest.find({ receiver: userId }).populate('sender');
+      const requests = await FriendRequest.find({ receiver: req.user._id }).populate('sender');
       res.json(requests);
     } catch (error) {
+      console.error(error)
       res.status(HTTP_STATUS_CODES.INTERNAL_SERVER_ERROR).json({ error: 'Internal Server Error' });
     }
 });
